@@ -2,17 +2,21 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <unordered_map>
+#include <map>
 
-enum class AllocOp : uint8_t {
-  Unknow,
+enum class AllocOp {
   New,
   Delete,
   NewArray,
   DeleteArray,
   Malloc,
-  Free
-}; // enum class AllocOp
+  Free,
+  CudaHostMalloc,
+  CudaDeviceMalloc,
+  CudaManagedMalloc,
+  CudaFree,
+  Unknown,
+};
 
 struct AllocAction {
   AllocOp op;
@@ -21,44 +25,44 @@ struct AllocAction {
   size_t size;
   size_t align;
   void *caller;
-  uint64_t timestamp;
+  int64_t timestamp;
 };
 
-const static std::unordered_map<AllocOp, const char *> kAllocOp2Name = {
-    {AllocOp::Unknow, "Unknow"},
-    {AllocOp::New, "New"},
-    {AllocOp::Delete, "Delete"},
-    {AllocOp::NewArray, "NewArray"},
-    {AllocOp::DeleteArray, "DeleteArray"},
-    {AllocOp::Malloc, "Malloc"},
-    {AllocOp::Free, "Free"}};
+constexpr const char *kAllocOpNames[] = {
+    "New",
+    "Delete",
+    "NewArray",
+    "DeleteArray",
+    "Malloc",
+    "Free",
+    "CudaHostMalloc",
+    "CudaDeviceMalloc",
+    "CudaManagedMalloc",
+    "CudaFree",
+    "Unknown",
+};
 
-const static std::unordered_map<AllocOp, bool> kAllocOpIsAllocation = {
-    {AllocOp::Unknow, false},      {AllocOp::New, true},
-    {AllocOp::Delete, false},      {AllocOp::NewArray, true},
-    {AllocOp::DeleteArray, false}, {AllocOp::Malloc, true},
-    {AllocOp::Free, false}};
+constexpr bool kAllocOpIsAllocation[] = {
+    true, false, true, false, true, false, true, true, true, false, false,
+};
 
-const static std::unordered_map<AllocOp, bool> kAllocOpIsC = {
-    {AllocOp::Unknow, false},     {AllocOp::New, false},
-    {AllocOp::Delete, false},      {AllocOp::NewArray, false},
-    {AllocOp::DeleteArray, false}, {AllocOp::Malloc, true},
-    {AllocOp::Free, true}};
+constexpr bool kAllocOpIsCpp[] = {
+    true, true, true, true, false, false, false, false, false, false, false,
+};
 
-const static std::unordered_map<AllocOp, bool> kAllocOpIsCpp = {
-    {AllocOp::Unknow, false},     {AllocOp::New, true},
-    {AllocOp::Delete, true},      {AllocOp::NewArray, true},
-    {AllocOp::DeleteArray, true}, {AllocOp::Malloc, false},
-    {AllocOp::Free, false}};
+constexpr bool kAllocOpIsC[] = {
+    false, false, false, false, true, true, false, false, false, false, false,
+};
 
+constexpr bool kAllocOpIsCuda[] = {
+    false, false, false, false, false, false, true, true, true, true, false,
+};
 
-const static std::unordered_map<AllocOp, AllocOp> kAllocOp2FreeAction = {
-    {AllocOp::Unknow, AllocOp::Unknow},
-    {AllocOp::New, AllocOp::Delete},
-    {AllocOp::Delete, AllocOp::Unknow},
-    {AllocOp::NewArray, AllocOp::DeleteArray},
-    {AllocOp::DeleteArray, AllocOp::Unknow},
-    {AllocOp::Malloc, AllocOp::Free},
-    {AllocOp::Free, AllocOp::Unknow}};
+constexpr AllocOp kAllocOpFreeFunction[] = {
+    AllocOp::Delete,   AllocOp::Unknown,  AllocOp::DeleteArray,
+    AllocOp::Unknown,  AllocOp::Malloc,   AllocOp::Unknown,
+    AllocOp::CudaFree, AllocOp::CudaFree, AllocOp::CudaFree,
+    AllocOp::Unknown,  AllocOp::Unknown,
+};
 
-
+constexpr size_t kNone = static_cast<size_t>(-1);

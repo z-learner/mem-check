@@ -28,6 +28,7 @@ struct PlotOptions {
 
   bool filter_cpp{true};
   bool filter_c{true};
+  bool filter_cuda{true};
 
   size_t svg_margin = 420;
   size_t svg_width = 2000;

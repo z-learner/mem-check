@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <deque>
 #include <fstream>
-
+#include <iostream>
 #include <mutex>
 #include <new>
 
@@ -20,6 +20,16 @@
 #include <unistd.h>
 
 #include <memory_resource>
+
+#ifdef __ENABLE_CUDA__
+#include <cuda_runtime.h>
+#include <dlfcn.h>
+
+#endif
+
+__attribute__((constructor)) void preload_init() {
+  fprintf(stdout, "mem-plot library loaded\n");
+}
 
 namespace detail {
 
@@ -175,6 +185,7 @@ extern "C" void *__libc_memalign(size_t alignment, size_t size) noexcept;
 
 #define RETURN_ADDRESS __builtin_return_address(0)
 
+// c
 extern "C" void *malloc(size_t size) noexcept {
   detail::EnableGuard ena;
   void *ptr = REAL_LIBC(malloc)(size);
@@ -253,6 +264,7 @@ extern "C" int posix_memalign(void **memptr, size_t alignment, size_t size) {
   return ret;
 }
 
+// cpp
 void operator delete(void *ptr) noexcept(false) {
   detail::EnableGuard ena;
 
@@ -433,6 +445,79 @@ void *operator new[](size_t size, std::align_val_t align,
   }
   return ptr;
 }
+
+#ifdef __ENABLE_CUDA__
+
+typedef cudaError_t (*cudaMalloc_t)(void **, size_t);
+typedef cudaError_t (*cudaMallocHost_t)(void **, size_t);
+typedef cudaError_t (*cudaMallocManaged_t)(void **, size_t, unsigned int);
+typedef cudaError_t (*cudaFree_t)(void *);
+typedef cudaError_t (*cudaHostFree_t)(void *);
+
+extern "C" cudaError_t cudaMalloc(void **ptr, size_t size) {
+  static cudaMalloc_t real_cudaMalloc =
+      (cudaMalloc_t)dlsym(RTLD_NEXT, "cudaMalloc");
+  cudaError_t result = real_cudaMalloc(ptr, size);
+  if (result == cudaSuccess) {
+    detail::EnableGuard ena;
+    if (ena) {
+      ena.on(AllocOp::CudaMalloc, *ptr, size, kNone, RETURN_ADDRESS);
+    }
+  }
+  return result;
+}
+
+extern "C" cudaError_t cudaMallocHost(void **ptr, size_t size) {
+  static cudaMallocHost_t real_cudaMallocHost =
+      (cudaMallocHost_t)dlsym(RTLD_NEXT, "cudaMallocHost");
+  cudaError_t result = real_cudaMallocHost(ptr, size);
+  if (result == cudaSuccess) {
+    detail::EnableGuard ena;
+    if (ena) {
+      ena.on(AllocOp::CudaHostMalloc, *ptr, size, kNone, RETURN_ADDRESS);
+    }
+  }
+  return result;
+}
+
+extern "C" cudaError_t cudaMallocManaged(void **ptr, size_t size,
+                                         unsigned int flags) {
+  static cudaMallocManaged_t real_cudaMallocManaged =
+      (cudaMallocManaged_t)dlsym(RTLD_NEXT, "cudaMallocManaged");
+  cudaError_t result = real_cudaMallocManaged(ptr, size, flags);
+  if (result == cudaSuccess) {
+    detail::EnableGuard ena;
+    if (ena) {
+      ena.on(AllocOp::CudaManagedMalloc, *ptr, size, kNone, RETURN_ADDRESS);
+    }
+  }
+  return result;
+}
+
+extern "C" cudaError_t cudaFree(void *ptr) {
+  static cudaFree_t real_cudaFree = (cudaFree_t)dlsym(RTLD_NEXT, "cudaFree");
+  cudaError_t result = real_cudaFree(ptr);
+
+  detail::EnableGuard ena;
+  if (ena) {
+    ena.on(AllocOp::CudaFree, ptr, 0, kNone, RETURN_ADDRESS);
+  }
+  return result;
+}
+
+extern "C" cudaError_t cudaHostFree(void *ptr) {
+  static cudaHostFree_t real_cudaHostFree =
+      (cudaHostFree_t)dlsym(RTLD_NEXT, "cudaFreeHost");
+  cudaError_t result = real_cudaHostFree(ptr);
+
+  detail::EnableGuard ena;
+  if (ena) {
+    ena.on(AllocOp::CudaHostFree, ptr, 0, kNone, RETURN_ADDRESS);
+  }
+  return result;
+}
+
+#endif
 
 static detail::GlobalData global_buff;
 static int global_init_helper = (detail::global = &global_buff, 0);

@@ -1,3 +1,14 @@
-
 add_executable(stl_example stl_example.cc)
 
+find_package(CUDA)
+if (CUDA_FOUND)
+    message(STATUS "CUDA found")
+    message(STATUS "CUDA version: ${CUDA_VERSION}")
+    message(STATUS "CUDA include path: ${CUDA_INCLUDE_DIRS}")
+    message(STATUS "CUDA library path: ${CUDA_LIBRARIES}")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-unknown-pragmas -Wno-unused-result")
+    add_executable(cuda_example cuda_example.cu)
+    set_target_properties(cuda_example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    target_include_directories(cuda_example PUBLIC ${CUDA_INCLUDE_DIRS})
+    target_link_libraries(cuda_example PUBLIC ${CUDA_LIBRARIES})
+endif()

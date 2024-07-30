@@ -5,9 +5,9 @@
 #include <thread>
 #include <unordered_set>
 
-#include <vector>
-
 #include <chrono>
+#include <cstdlib>
+#include <vector>
 
 using namespace std::chrono_literals;
 
@@ -32,6 +32,9 @@ int main(int argc, char *argv[]) {
   test_function<std::list>();
   test_function<std::unordered_set>();
   test_function<std::set>();
+
+  void *a = malloc(1);
+  free(a);
 
   return 0;
 }

@@ -464,6 +464,10 @@ void mem_check_plot_alloc_actions(std::vector<AllocAction> actions) {
     if (!options.filter_cpp && kAllocOpIsCpp[static_cast<size_t>(action.op)]) {
       continue;
     }
+    if (!options.filter_cuda &&
+        kAllocOpIsCuda[static_cast<size_t>(action.op)]) {
+      continue;
+    }
 
     if (kAllocOpIsAllocation[static_cast<size_t>(action.op)]) {
       living.insert({action.ptr,

@@ -89,11 +89,13 @@ struct GlobalData {
       auto it = allocated.find(ptr);
       if (it == allocated.end()) {
         // TODO : this has problem, because you can't ensure the global data is
-        // initialized firstly. printf("检测到尝试释放不存在的内存 ptr = %p,
-        // size = %zd, "
-        //        "caller = %s, action = %s\n",
-        //        ptr, size, addr2sym(caller).c_str(),
-        //        kAllocOpNames[static_cast<size_t>(op)]);
+        // initialized firstly.
+        /*
+        printf("检测到尝试释放不存在的内存 ptr = %p, size = %zd, "
+               "caller = %s, action = %s\n",
+               ptr, size, addr2sym(caller).c_str(),
+               kAllocOpNames[static_cast<size_t>(op)]);
+        */
         return;
       }
 

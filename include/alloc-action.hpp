@@ -66,7 +66,7 @@ constexpr bool kAllocOpIsCuda[] = {
 
 constexpr AllocOp kAllocOpFreeFunction[] = {
     AllocOp::Delete,       AllocOp::Unknown,  AllocOp::DeleteArray,
-    AllocOp::Unknown,      AllocOp::Malloc,   AllocOp::Unknown,
+    AllocOp::Unknown,      AllocOp::Free,     AllocOp::Unknown,
     AllocOp::CudaHostFree, AllocOp::CudaFree, AllocOp::CudaFree,
     AllocOp::Unknown,      AllocOp::Unknown,  AllocOp::Unknown,
 };
